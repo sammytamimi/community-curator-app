@@ -1,9 +1,8 @@
-import os
-from openai import AzureOpenAI
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+
+from api.chat import router as chat_router
 
 load_dotenv()
 
@@ -22,27 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = AzureOpenAI(
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-    api_version="2024-02-01",
-)
-
-
-class ChatMessage(BaseModel):
-    message: str
-
-
-@app.post("/chat")
-async def chat(message: ChatMessage):
-    response = client.chat.completions.create(
-        model=os.getenv("AZURE_OPENAI_DEPLOYMENT_ID"),
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": message.message},
-        ],
-    )
-    return {"response": response.choices[0].message.content}
+app.include_router(chat_router)
 
 
 @app.get("/")
