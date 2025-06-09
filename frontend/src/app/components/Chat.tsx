@@ -37,33 +37,89 @@ export default function Chat() {
     if (!input.trim()) return;
 
     const userMessage = { text: input, isUser: true };
-    setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     setIsLoading(true);
 
+    // Add both user message and empty assistant message at once
+    setMessages((prev) => [
+      ...prev,
+      userMessage,
+      { text: '', isUser: false }
+    ]);
+    
+    // Calculate the assistant message index (it will be the last message)
+    const assistantMessageIndex = messages.length + 1;
+
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch('http://localhost:8000/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ message: currentInput }),
       });
 
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
 
-      const data = await response.json();
-      const botMessage = { text: data.response, isUser: false };
-      setMessages((prev) => [...prev, botMessage]);
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        let accumulatedText = '';
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const jsonStr = line.slice(6);
+                const data = JSON.parse(jsonStr);
+                
+                if (data.error) {
+                  throw new Error(data.error);
+                }
+                
+                if (data.content) {
+                  accumulatedText += data.content;
+                  setMessages((prev) => {
+                    const newMessages = [...prev];
+                    newMessages[assistantMessageIndex] = {
+                      text: accumulatedText,
+                      isUser: false
+                    };
+                    return newMessages;
+                  });
+                }
+                
+                if (data.done) {
+                  break;
+                }
+              } catch (parseError) {
+                // Skip malformed JSON - this is normal for SSE format
+              }
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('There was a problem with the fetch operation:', error);
-      const errorMessage = {
-        text: 'Sorry, I am having trouble connecting. Please try again later.',
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        newMessages[assistantMessageIndex] = {
+          text: 'Sorry, I am having trouble connecting. Please try again later.',
+          isUser: false
+        };
+        return newMessages;
+      });
     } finally {
       setIsLoading(false);
     }

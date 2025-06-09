@@ -50,44 +50,85 @@ function Chat() {
             text: input,
             isUser: true
         };
-        setMessages((prev)=>[
-                ...prev,
-                userMessage
-            ]);
+        const currentInput = input;
         setInput('');
         setIsLoading(true);
+        // Add both user message and empty assistant message at once
+        setMessages((prev)=>[
+                ...prev,
+                userMessage,
+                {
+                    text: '',
+                    isUser: false
+                }
+            ]);
+        // Calculate the assistant message index (it will be the last message)
+        const assistantMessageIndex = messages.length + 1;
         try {
-            const response = await fetch('http://localhost:8000/chat', {
+            const response = await fetch('http://localhost:8000/chat/stream', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    message: input
+                    message: currentInput
                 })
             });
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
-            const data = await response.json();
-            const botMessage = {
-                text: data.response,
-                isUser: false
-            };
-            setMessages((prev)=>[
-                    ...prev,
-                    botMessage
-                ]);
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+            if (reader) {
+                let accumulatedText = '';
+                while(true){
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    for (const line of lines){
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const jsonStr = line.slice(6);
+                                const data = JSON.parse(jsonStr);
+                                if (data.error) {
+                                    throw new Error(data.error);
+                                }
+                                if (data.content) {
+                                    accumulatedText += data.content;
+                                    setMessages((prev)=>{
+                                        const newMessages = [
+                                            ...prev
+                                        ];
+                                        newMessages[assistantMessageIndex] = {
+                                            text: accumulatedText,
+                                            isUser: false
+                                        };
+                                        return newMessages;
+                                    });
+                                }
+                                if (data.done) {
+                                    break;
+                                }
+                            } catch (parseError) {
+                            // Skip malformed JSON - this is normal for SSE format
+                            }
+                        }
+                    }
+                }
+            }
         } catch (error) {
             console.error('There was a problem with the fetch operation:', error);
-            const errorMessage = {
-                text: 'Sorry, I am having trouble connecting. Please try again later.',
-                isUser: false
-            };
-            setMessages((prev)=>[
-                    ...prev,
-                    errorMessage
-                ]);
+            setMessages((prev)=>{
+                const newMessages = [
+                    ...prev
+                ];
+                newMessages[assistantMessageIndex] = {
+                    text: 'Sorry, I am having trouble connecting. Please try again later.',
+                    isUser: false
+                };
+                return newMessages;
+            });
         } finally{
             setIsLoading(false);
         }
@@ -103,7 +144,7 @@ function Chat() {
                             isUser: msg.isUser
                         }, index, false, {
                             fileName: "[project]/src/app/components/Chat.tsx",
-                            lineNumber: 76,
+                            lineNumber: 132,
                             columnNumber: 11
                         }, this)),
                     isLoading && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -117,50 +158,50 @@ function Chat() {
                                         className: "w-2.5 h-2.5 bg-gray-500 rounded-full animate-pulse"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/components/Chat.tsx",
-                                        lineNumber: 82,
+                                        lineNumber: 138,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "w-2.5 h-2.5 bg-gray-500 rounded-full animate-pulse delay-75"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/components/Chat.tsx",
-                                        lineNumber: 83,
+                                        lineNumber: 139,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "w-2.5 h-2.5 bg-gray-500 rounded-full animate-pulse delay-150"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/components/Chat.tsx",
-                                        lineNumber: 84,
+                                        lineNumber: 140,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/components/Chat.tsx",
-                                lineNumber: 81,
+                                lineNumber: 137,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/app/components/Chat.tsx",
-                            lineNumber: 80,
+                            lineNumber: 136,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/app/components/Chat.tsx",
-                        lineNumber: 79,
+                        lineNumber: 135,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         ref: messagesEndRef
                     }, void 0, false, {
                         fileName: "[project]/src/app/components/Chat.tsx",
-                        lineNumber: 89,
+                        lineNumber: 145,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/components/Chat.tsx",
-                lineNumber: 74,
+                lineNumber: 130,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -178,7 +219,7 @@ function Chat() {
                             disabled: isLoading
                         }, void 0, false, {
                             fileName: "[project]/src/app/components/Chat.tsx",
-                            lineNumber: 94,
+                            lineNumber: 150,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -196,34 +237,34 @@ function Chat() {
                                     clipRule: "evenodd"
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/components/Chat.tsx",
-                                    lineNumber: 114,
+                                    lineNumber: 170,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/components/Chat.tsx",
-                                lineNumber: 108,
+                                lineNumber: 164,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/app/components/Chat.tsx",
-                            lineNumber: 103,
+                            lineNumber: 159,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/components/Chat.tsx",
-                    lineNumber: 93,
+                    lineNumber: 149,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/components/Chat.tsx",
-                lineNumber: 92,
+                lineNumber: 148,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/components/Chat.tsx",
-        lineNumber: 73,
+        lineNumber: 129,
         columnNumber: 5
     }, this);
 }
