@@ -47,7 +47,7 @@ export default function Chat() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: input }),
+        body: JSON.stringify({ message: input }),
       });
 
       if (!response.ok) {
