@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from dotenv import load_dotenv
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
-from core.loader import get_document_chunks_from_excel
+from core.loader import get_document_chunks_from_pdf
 
 # Load environment variables from .env file
 load_dotenv()
@@ -18,11 +18,11 @@ CHROMA_DB_DIR = os.path.join(os.path.dirname(__file__), '..', 'vector_db')
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 
 
-def main(file_name: str, url_column_name: str):
+def main(file_name: str):
     """
-    Main function to orchestrate the data ingestion process.
+    Main function to orchestrate the PDF ingestion process.
     """
-    print("--- Starting Data Ingestion Process ---")
+    print("--- Starting PDF Ingestion Process ---")
 
     # 1. Initialize the Azure OpenAI Embeddings model
     print("Initializing Azure OpenAI Embeddings model...")
@@ -36,13 +36,9 @@ def main(file_name: str, url_column_name: str):
         print(f"Error initializing embeddings model: {e}")
         return
 
-    # 2. Load and process document chunks from the Excel file
+    # 2. Load and process document chunks from the PDF file
     file_path = os.path.join(DATA_DIR, file_name)
-    if not os.path.exists(file_path):
-        print(f"Error: File not found at {file_path}")
-        return
-
-    chunks = get_document_chunks_from_excel(file_path, url_column_name)
+    chunks = get_document_chunks_from_pdf(file_path)
 
     if not chunks:
         print("No document chunks were created. Halting ingestion process.")
@@ -63,23 +59,18 @@ def main(file_name: str, url_column_name: str):
         print(f"Error creating or adding to ChromaDB vector store: {e}")
         return
 
-    print("--- Data Ingestion Process Complete ---")
+    print("--- PDF Ingestion Process Complete ---")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Ingest data from an Excel file of URLs into a ChromaDB vector store."
+        description="Ingest data from a PDF file into a ChromaDB vector store."
     )
     parser.add_argument(
         "file_name",
         type=str,
-        help="The name of the Excel file located in the 'backend/data' directory."
-    )
-    parser.add_argument(
-        "url_column",
-        type=str,
-        help="The name of the column in the Excel file that contains the URLs to be scraped."
+        help="The name of the PDF file located in the 'backend/data' directory."
     )
     args = parser.parse_args()
 
-    main(args.file_name, args.url_column)
+    main(args.file_name) 

@@ -26,6 +26,7 @@ def get_document_chunks_from_excel(file_path: str, url_column_name: str) -> List
         urls = df[url_column_name].dropna().tolist()
         if not urls:
             print("No URLs found in the specified column.")
+
             return []
         print(f"Found {len(urls)} URLs to process.")
     except Exception as e:
@@ -53,3 +54,4 @@ def get_document_chunks_from_excel(file_path: str, url_column_name: str) -> List
     print(f"Split the content into {len(chunks)} searchable chunks.")
 
     return chunks
+
