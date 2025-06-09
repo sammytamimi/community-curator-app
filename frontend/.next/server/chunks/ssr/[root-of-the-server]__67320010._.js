@@ -68,7 +68,7 @@ function Chat() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    prompt: input
+                    message: input
                 })
             });
             if (!response.ok) {
